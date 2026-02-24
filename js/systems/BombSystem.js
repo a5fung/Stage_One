@@ -207,8 +207,8 @@ export class BombSystem {
     this.enemyBomb._light.color.setHex(BOMB_COLOR_DEFUSED);
 
     setTimeout(() => {
-      gameState.transition('END');
       window._endReason = 'WIN_DEFUSE';
+      gameState.transition('END');
     }, 600);
   }
 
@@ -236,8 +236,8 @@ export class BombSystem {
     const screen = this.teamBomb._screen;
     screen.material.color.setHex(BOMB_COLOR_DEFUSED);
     screen.material.emissive.setHex(BOMB_COLOR_DEFUSED);
-    gameState.transition('END');
     window._endReason = 'LOSE_DEFUSED';
+    gameState.transition('END');
   }
 
   start() {
@@ -254,8 +254,8 @@ export class BombSystem {
         this.teamTimer = 0;
         this.teamExploded = true;
         this._explode(this.teamBomb);
-        gameState.transition('END');
         window._endReason = 'LOSE_EXPLODE';
+        gameState.transition('END');
       }
     }
     if (!this.enemyDefused && !this.enemyExploded) {
@@ -264,8 +264,8 @@ export class BombSystem {
         this.enemyTimer = 0;
         this.enemyExploded = true;
         this._explode(this.enemyBomb);
-        gameState.transition('END');
         window._endReason = 'WIN_TIMER';
+        gameState.transition('END');
       }
     }
 
