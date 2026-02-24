@@ -1,0 +1,558 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #000;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  color: #fff;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+}
+
+#gameCanvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+.hidden { display: none !important; }
+
+/* =================== MENU =================== */
+#menuScreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.menu-title {
+  font-size: clamp(36px, 8vw, 72px);
+  font-weight: bold;
+  letter-spacing: 12px;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+
+.menu-subtitle {
+  font-size: clamp(12px, 2.5vw, 18px);
+  letter-spacing: 6px;
+  color: #aaa;
+  margin-bottom: 40px;
+}
+
+.menu-btn {
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: clamp(14px, 2.5vw, 18px);
+  letter-spacing: 4px;
+  padding: 14px 40px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.menu-btn:hover, .menu-btn:active {
+  background: #fff;
+  color: #000;
+}
+
+.menu-hint {
+  font-size: clamp(10px, 1.8vw, 13px);
+  color: #666;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+/* =================== PHASE BANNER =================== */
+#phaseBanner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(20px, 5vw, 40px);
+  letter-spacing: 8px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255,255,255,0.7);
+  background: rgba(0,0,0,0.7);
+  padding: 20px 50px;
+  z-index: 50;
+  animation: bannerFade 3s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes bannerFade {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+/* =================== TOP HUD =================== */
+#topHud {
+  position: fixed;
+  top: 16px;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.bomb-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0,0,0,0.6);
+  padding: 8px 20px;
+  border: 1px solid rgba(255,255,255,0.2);
+  min-width: 140px;
+}
+
+.timer-label {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.bomb-timer span:last-child {
+  font-size: clamp(18px, 3vw, 26px);
+  font-weight: bold;
+  letter-spacing: 3px;
+}
+
+.team-timer { border-color: rgba(100,200,255,0.4); }
+.enemy-timer { border-color: rgba(255,100,100,0.4); }
+
+.bomb-timer.pulse span:last-child {
+  animation: timerPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes timerPulse {
+  from { color: #fff; }
+  to { color: #ff4444; }
+}
+
+/* =================== BOTTOM HUD =================== */
+#bottomHud {
+  position: fixed;
+  bottom: 20px;
+  left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#hpSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #aaa;
+}
+
+#hpBar {
+  width: clamp(80px, 15vw, 140px);
+  height: 8px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+#hpFill {
+  height: 100%;
+  background: #4af;
+  transition: width 0.2s;
+  width: 100%;
+}
+
+#hpNum {
+  font-size: clamp(12px, 2vw, 16px);
+  font-weight: bold;
+  min-width: 30px;
+}
+
+#ammoSection {
+  display: flex;
+  align-items: center;
+  font-size: clamp(12px, 2vw, 16px);
+}
+
+#ammoCount {
+  font-size: clamp(18px, 3vw, 26px);
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+/* =================== CROSSHAIR =================== */
+#crosshair {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 10;
+  line-height: 1;
+}
+
+/* =================== HIT MARKER =================== */
+#hitMarker {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  color: #ff4;
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* =================== DAMAGE VIGNETTE =================== */
+#damageVignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 rgba(255,0,0,0);
+  transition: box-shadow 0.1s;
+}
+
+#damageVignette.flash {
+  box-shadow: inset 0 0 120px 60px rgba(255,0,0,0.5);
+}
+
+/* =================== PHASE TIMER =================== */
+#phaseTimer {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(14px, 2.5vw, 20px);
+  letter-spacing: 3px;
+  color: #fa0;
+  background: rgba(0,0,0,0.6);
+  padding: 6px 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* =================== NOTIFICATION =================== */
+#notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60px);
+  background: rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,100,0.6);
+  padding: 14px 28px;
+  font-size: clamp(12px, 2vw, 15px);
+  letter-spacing: 2px;
+  color: #ffd;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+  max-width: 80vw;
+}
+
+/* =================== CODE PANEL =================== */
+#codePanel {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.92);
+  border: 2px solid rgba(255,255,255,0.4);
+  padding: 30px 40px;
+  z-index: 30;
+  text-align: center;
+  min-width: 280px;
+  pointer-events: all;
+}
+
+.code-panel-title {
+  font-size: clamp(14px, 2.5vw, 18px);
+  letter-spacing: 5px;
+  margin-bottom: 8px;
+}
+
+.code-panel-hint {
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 2px;
+}
+
+#codeInputDisplay {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0 10px;
+}
+
+.code-digit {
+  width: 44px;
+  height: 54px;
+  border: 2px solid rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.code-digit.filled {
+  border-color: #fff;
+  color: #ff4;
+}
+
+#codeError {
+  color: #f44;
+  letter-spacing: 3px;
+  font-size: 14px;
+  margin-top: 8px;
+  animation: errorFlash 0.3s ease-in-out;
+}
+
+@keyframes errorFlash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* Mobile numpad */
+#mobileNumpad {
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  #mobileNumpad { display: grid; }
+}
+
+.numpad-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  padding: 14px 0;
+  cursor: pointer;
+  transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.numpad-btn:active { background: rgba(255,255,255,0.3); }
+.numpad-clear { font-size: 18px; }
+.numpad-enter { font-size: 13px; letter-spacing: 1px; }
+
+/* =================== CODES PANEL =================== */
+#codesPanel {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,100,0.4);
+  padding: 12px 18px;
+  z-index: 10;
+  pointer-events: none;
+  min-width: 140px;
+}
+
+.codes-title {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #aaa;
+  margin-bottom: 8px;
+}
+
+#codesList {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffd;
+  letter-spacing: 4px;
+}
+
+#codesList div { margin-bottom: 4px; }
+
+/* =================== END SCREEN =================== */
+#endScreen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+#endTitle {
+  font-size: clamp(32px, 8vw, 64px);
+  font-weight: bold;
+  letter-spacing: 10px;
+  margin-bottom: 12px;
+}
+
+#endSubtitle {
+  font-size: clamp(12px, 2.5vw, 18px);
+  letter-spacing: 4px;
+  color: #aaa;
+  margin-bottom: 40px;
+}
+
+/* =================== INTERACT PROMPT =================== */
+#interactPrompt {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 8px 20px;
+  font-size: clamp(12px, 2vw, 14px);
+  letter-spacing: 3px;
+  color: #ffd;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* =================== MOBILE CONTROLS =================== */
+#mobileControls {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+#joystickZone {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 140px;
+  height: 140px;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#joystickBase {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#joystickThumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  border: 2px solid rgba(255,255,255,0.6);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%; top: 50%;
+  pointer-events: none;
+  transition: none;
+}
+
+#lookZone {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: calc(100% - 180px);
+  height: 55%;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#fireBtn {
+  position: absolute;
+  bottom: 60px;
+  right: 20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(200,50,50,0.6);
+  border: 2px solid rgba(255,100,100,0.8);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+#fireBtn:active { background: rgba(255,80,80,0.8); }
+
+#interactBtn {
+  position: absolute;
+  bottom: 160px;
+  right: 110px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255,220,50,0.5);
+  border: 2px solid rgba(255,220,50,0.8);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  font-weight: bold;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+#interactBtn:active { background: rgba(255,220,50,0.8); }
+
+#reloadBtn {
+  position: absolute;
+  bottom: 160px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(80,180,255,0.4);
+  border: 2px solid rgba(80,180,255,0.7);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: bold;
+  pointer-events: all;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+#reloadBtn:active { background: rgba(80,180,255,0.7); }
+
+/* Only show mobile controls on touch devices */
+@media (pointer: fine) {
+  #mobileControls { display: none !important; }
+}

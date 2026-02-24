@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Stage One</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- MENU SCREEN -->
+  <div id="menuScreen">
+    <div class="menu-title">STAGE ONE</div>
+    <div class="menu-subtitle">5v5 BOMB DEFUSAL</div>
+    <button id="startBtn" class="menu-btn">CLICK TO PLAY</button>
+    <div class="menu-hint">WASD / Arrow Keys — Move &nbsp;|&nbsp; Mouse — Look &nbsp;|&nbsp; LMB — Shoot &nbsp;|&nbsp; R — Reload &nbsp;|&nbsp; E — Interact</div>
+    <div class="menu-hint" style="margin-top:6px;">Mobile: Joystick (left) — Move &nbsp;|&nbsp; Swipe (right) — Look &nbsp;|&nbsp; Fire button — Shoot</div>
+  </div>
+
+  <!-- PHASE BANNER -->
+  <div id="phaseBanner" class="hidden"></div>
+
+  <!-- TOP HUD -->
+  <div id="topHud" class="hidden">
+    <div id="teamBombTimer" class="bomb-timer team-timer">
+      <span class="timer-label">TEAM BOMB</span>
+      <span id="teamBombTime">15:00</span>
+    </div>
+    <div id="enemyBombTimer" class="bomb-timer enemy-timer">
+      <span class="timer-label">ENEMY BOMB</span>
+      <span id="enemyBombTime">15:00</span>
+    </div>
+  </div>
+
+  <!-- BOTTOM HUD -->
+  <div id="bottomHud" class="hidden">
+    <div id="hpSection">
+      <span class="hud-label">HP</span>
+      <div id="hpBar"><div id="hpFill"></div></div>
+      <span id="hpNum">200</span>
+    </div>
+    <div id="ammoSection">
+      <span id="ammoCount">50</span>
+      <span class="hud-label">/∞</span>
+      &nbsp;&nbsp;
+      <span class="hud-label">[R]=RELOAD</span>
+    </div>
+  </div>
+
+  <!-- CROSSHAIR -->
+  <div id="crosshair" class="hidden">+</div>
+
+  <!-- HIT MARKER -->
+  <div id="hitMarker" class="hidden">✕</div>
+
+  <!-- DAMAGE VIGNETTE -->
+  <div id="damageVignette"></div>
+
+  <!-- PHASE TIMER (HIDE phase countdown) -->
+  <div id="phaseTimer" class="hidden"></div>
+
+  <!-- NOTIFICATION POPUP (code found, etc.) -->
+  <div id="notification" class="hidden"></div>
+
+  <!-- CODE PANEL (bomb defuse input) -->
+  <div id="codePanel" class="hidden">
+    <div class="code-panel-title">ENTER DEFUSE CODE</div>
+    <div class="code-panel-hint">Type 4 digits then press ENTER</div>
+    <div id="codeInputDisplay">
+      <span class="code-digit" id="cd0">_</span>
+      <span class="code-digit" id="cd1">_</span>
+      <span class="code-digit" id="cd2">_</span>
+      <span class="code-digit" id="cd3">_</span>
+    </div>
+    <div id="codeError" class="hidden">WRONG CODE</div>
+    <div class="code-panel-hint" style="margin-top:12px;">ESC to cancel</div>
+    <!-- Mobile number pad -->
+    <div id="mobileNumpad">
+      <button class="numpad-btn" data-digit="1">1</button>
+      <button class="numpad-btn" data-digit="2">2</button>
+      <button class="numpad-btn" data-digit="3">3</button>
+      <button class="numpad-btn" data-digit="4">4</button>
+      <button class="numpad-btn" data-digit="5">5</button>
+      <button class="numpad-btn" data-digit="6">6</button>
+      <button class="numpad-btn" data-digit="7">7</button>
+      <button class="numpad-btn" data-digit="8">8</button>
+      <button class="numpad-btn" data-digit="9">9</button>
+      <button class="numpad-btn numpad-clear" data-digit="clear">⌫</button>
+      <button class="numpad-btn" data-digit="0">0</button>
+      <button class="numpad-btn numpad-enter" data-digit="enter">ENTER</button>
+    </div>
+  </div>
+
+  <!-- COLLECTED CODES PANEL -->
+  <div id="codesPanel" class="hidden">
+    <div class="codes-title">COLLECTED CODES</div>
+    <div id="codesList"></div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="endScreen" class="hidden">
+    <div id="endTitle"></div>
+    <div id="endSubtitle"></div>
+    <button id="playAgainBtn" class="menu-btn">PLAY AGAIN</button>
+  </div>
+
+  <!-- MOBILE CONTROLS -->
+  <div id="mobileControls" class="hidden">
+    <!-- Left joystick -->
+    <div id="joystickZone">
+      <div id="joystickBase">
+        <div id="joystickThumb"></div>
+      </div>
+    </div>
+    <!-- Right look zone (swipe area) -->
+    <div id="lookZone"></div>
+    <!-- Fire button -->
+    <button id="fireBtn">FIRE</button>
+    <!-- Interact button -->
+    <button id="interactBtn">E</button>
+    <!-- Reload button -->
+    <button id="reloadBtn">R</button>
+  </div>
+
+  <!-- INTERACT PROMPT -->
+  <div id="interactPrompt" class="hidden">[E] Interact</div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
