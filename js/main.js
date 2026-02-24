@@ -20,27 +20,23 @@ const canvas = document.getElementById('gameCanvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.autoClear = false; // manual clear for two-camera technique
+renderer.autoClear = false;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf0f0f0);
 scene.fog = new THREE.Fog(0xf0f0f0, 30, 75);
 
-// Main camera
 const camera = new THREE.PerspectiveCamera(
   75, window.innerWidth / window.innerHeight, 0.1, 100
 );
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-scene.add(ambientLight);
-
-const sunLight = new THREE.DirectionalLight(0xffffff, 0.6);
-sunLight.position.set(20, 30, 20);
-scene.add(sunLight);
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+sun.position.set(20, 30, 20);
+scene.add(sun);
 
 // ========================
-// SYSTEMS INSTANTIATION
+// SYSTEMS
 // ========================
 const input       = new InputManager();
 const collMap     = new CollisionMap();
@@ -53,25 +49,17 @@ const botManager  = new BotManager(scene, collMap);
 const shootSystem = new ShootingSystem(camera, scene);
 const hud         = new HUD();
 
-// Wire gun to player
 player._gun = gun;
-
-// Wire bomb refs
 bombSystem.setRefs(player, player.controls);
 
-// ========================
-// BUILD WORLD
-// ========================
 mapBuilder.build();
 
 // ========================
 // GAME STATE TRANSITIONS
 // ========================
-
 let hideTimer = 0;
 
 function startGame() {
-  // Reset everything
   player.reset();
   gun.reset();
   botManager.reset();
@@ -80,17 +68,13 @@ function startGame() {
   hud.resetTimerDisplay();
   window._endReason = null;
 
-  // Spawn bots
   botManager.spawnAll();
-
-  // Transition to HIDE phase
   gameState.transition('HIDE');
   hideTimer = HIDE_PHASE_DURATION;
 
   hud.showGame();
   hud.showBanner('HIDE PHASE', 3000);
 
-  // Start hide code mission for enemy bots
   botManager.startHidePhase((pos, code) => {
     codeSystem.placeNote(pos, code);
   });
@@ -99,45 +83,43 @@ function startGame() {
 function startMainPhase() {
   gameState.transition('MAIN');
   bombSystem.start();
-
   hud.showBanner('ROUND START', 3000);
   hud.hidePhaseTimer();
-
   botManager.startMainPhase(() => {
     bombSystem.triggerTeamBombDefused();
   });
 }
 
-gameState.on('END', (prev) => {
+gameState.on('END', () => {
   const reason = window._endReason || 'LOSE_DEAD';
   hud.showEnd(reason);
 });
 
 // ========================
-// MENU BUTTON
+// BUTTON HANDLERS
 // ========================
-document.getElementById('startBtn').addEventListener('click', () => {
+function onStartClick() {
   startGame();
-  // On desktop, request pointer lock
-  if (!player.input._isMobile) {
-    player.requestLock();
+  // Request pointer lock on desktop (must be inside click handler)
+  if (!input._isMobile) {
+    try { player.requestLock(); } catch(e) { /* ignore — user can click canvas later */ }
   }
-});
+}
+
+document.getElementById('startBtn').addEventListener('click', onStartClick);
 
 document.getElementById('playAgainBtn').addEventListener('click', () => {
   document.getElementById('endScreen').classList.add('hidden');
   startGame();
-  if (!player.input._isMobile) {
-    player.requestLock();
+  if (!input._isMobile) {
+    try { player.requestLock(); } catch(e) {}
   }
 });
 
-// Click on canvas to lock pointer (desktop)
+// Also lock on canvas click (for desktop users who dismissed the menu)
 canvas.addEventListener('click', () => {
-  if (gameState.is('MAIN') || gameState.is('HIDE')) {
-    if (!player.input._isMobile && !player.isInCodePanel) {
-      player.requestLock();
-    }
+  if ((gameState.is('MAIN') || gameState.is('HIDE')) && !player.isInCodePanel && !input._isMobile) {
+    try { player.requestLock(); } catch(e) {}
   }
 });
 
@@ -151,72 +133,53 @@ function animate() {
   requestAnimationFrame(animate);
 
   const now   = performance.now();
-  const delta = Math.min((now - prevTime) / 1000, 0.1); // cap at 100ms
+  const delta = Math.min((now - prevTime) / 1000, 0.1);
   prevTime    = now;
 
   if (!gameState.is('MENU')) gameTime += delta;
 
-  // Flush input deltas
   input.flush();
 
-  // ---- HIDE PHASE COUNTDOWN ----
   if (gameState.is('HIDE')) {
     hideTimer -= delta;
     hud.showHideTimer(hideTimer);
-    if (hideTimer <= 0) {
-      startMainPhase();
-    }
+    if (hideTimer <= 0) startMainPhase();
   }
 
-  // ---- UPDATE ----
   if (gameState.is('HIDE') || gameState.is('MAIN')) {
     player.update(delta);
     gun.update(delta, player.isMoving, gameTime);
 
+    botManager.update(delta, player, mapBuilder.wallMeshes);
+
     if (gameState.is('MAIN')) {
-      botManager.update(delta, player, mapBuilder.wallMeshes);
       bombSystem.update(delta, player.position, input);
       codeSystem.update(delta, player.position, input);
-    } else {
-      // HIDE phase — bots still walk to hide spots
-      botManager.update(delta, player, mapBuilder.wallMeshes);
     }
 
     hud.update(delta, player, bombSystem);
 
-    // Shooting
     if (input.leftClickFired && !player.isInCodePanel && gameState.is('MAIN')) {
       if (gun.fire()) {
-        shootSystem.shoot(
-          botManager.getEnemyMeshes(),
-          collMap.wallMeshes,
-          botManager
-        );
+        shootSystem.shoot(botManager.getEnemyMeshes(), collMap.wallMeshes, botManager);
       }
     }
 
-    // Reload
-    if (input.isReload()) {
-      gun.startReload();
-    }
+    if (input.isReload()) gun.startReload();
 
     shootSystem.update(delta);
   }
 
-  // Clear single-shot flags AFTER all systems have had a chance to read them
   input.clearSingleShot();
 
-  // ---- RENDER ----
   renderer.clear();
   renderer.render(scene, camera);
-  gun.render(); // second pass: clearDepth + render gunScene
+  gun.render();
 
-  // Make HP bars billboard-face camera
+  // Billboard HP bars
   if (gameState.is('HIDE') || gameState.is('MAIN')) {
     for (const bot of botManager.allBots) {
-      if (!bot.dead && bot.hpBar) {
-        bot.hpBar.lookAt(camera.position);
-      }
+      if (!bot.dead && bot.hpBar) bot.hpBar.lookAt(camera.position);
     }
   }
 }
@@ -225,15 +188,17 @@ function animate() {
 // RESIZE
 // ========================
 window.addEventListener('resize', () => {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
 });
 
 // ========================
-// START LOOP
+// READY — show the button
 // ========================
 hud.showMenu();
+document.getElementById('loadingMsg').style.display = 'none';
+document.getElementById('startBtn').style.display = '';
+
 animate();

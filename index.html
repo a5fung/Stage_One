@@ -8,13 +8,29 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
     }
   }
   </script>
+
+  <!-- Catch any JS errors that would silently kill the button -->
+  <script>
+    window.addEventListener('error', function(e) {
+      const el = document.getElementById('jsError');
+      if (el) el.textContent = 'Error: ' + e.message + ' (' + (e.filename||'').split('/').pop() + ':' + e.lineno + ')';
+      if (el) el.style.display = 'block';
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const el = document.getElementById('jsError');
+      if (el) el.textContent = 'Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason);
+      if (el) el.style.display = 'block';
+    });
+  </script>
 </head>
 <body>
+  <!-- Error display (hidden unless JS throws) -->
+  <div id="jsError" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#f44;color:#fff;padding:10px;font-family:monospace;font-size:13px;z-index:9999;word-break:break-all;"></div>
 
   <canvas id="gameCanvas"></canvas>
 
@@ -22,7 +38,8 @@
   <div id="menuScreen">
     <div class="menu-title">STAGE ONE</div>
     <div class="menu-subtitle">5v5 BOMB DEFUSAL</div>
-    <button id="startBtn" class="menu-btn">CLICK TO PLAY</button>
+    <div id="loadingMsg" style="color:#888;font-family:monospace;letter-spacing:3px;font-size:13px;margin-bottom:16px;">LOADING...</div>
+    <button id="startBtn" class="menu-btn" style="display:none">CLICK TO PLAY</button>
     <div class="menu-hint">WASD / Arrow Keys — Move &nbsp;|&nbsp; Mouse — Look &nbsp;|&nbsp; LMB — Shoot &nbsp;|&nbsp; R — Reload &nbsp;|&nbsp; E — Interact</div>
     <div class="menu-hint" style="margin-top:6px;">Mobile: Joystick (left) — Move &nbsp;|&nbsp; Swipe (right) — Look &nbsp;|&nbsp; Fire button — Shoot</div>
   </div>
