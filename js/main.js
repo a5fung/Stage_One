@@ -108,6 +108,13 @@ function onStartClick() {
 
 document.getElementById('startBtn').addEventListener('click', onStartClick);
 
+document.getElementById('helpBtn').addEventListener('click', () => {
+  document.getElementById('helpScreen').classList.remove('hidden');
+});
+document.getElementById('helpCloseBtn').addEventListener('click', () => {
+  document.getElementById('helpScreen').classList.add('hidden');
+});
+
 document.getElementById('playAgainBtn').addEventListener('click', () => {
   document.getElementById('endScreen').classList.add('hidden');
   startGame();
@@ -200,5 +207,6 @@ window.addEventListener('resize', () => {
 hud.showMenu();
 document.getElementById('loadingMsg').style.display = 'none';
 document.getElementById('startBtn').style.display = '';
+document.getElementById('helpBtn').style.display = '';
 
 animate();
