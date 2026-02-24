@@ -162,6 +162,7 @@ function animate() {
     if (gameState.is('MAIN')) {
       bombSystem.update(delta, player.position, input);
       codeSystem.update(delta, player.position, input);
+      codeSystem.updateCompassAngle(camera.rotation.y);
     }
 
     hud.update(delta, player, bombSystem);

@@ -571,6 +571,37 @@ kbd {
   margin-bottom: 40px;
 }
 
+/* =================== NOTE COMPASS =================== */
+#noteCompass {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#noteCompassArrow {
+  font-size: 22px;
+  color: #ffdd00;
+  text-shadow: 0 0 8px rgba(255,200,0,0.9);
+  line-height: 1;
+  /* rotation applied via JS */
+  display: inline-block;
+  transform-origin: center center;
+}
+
+#noteCompassDist {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #ffdd00;
+  margin-top: 2px;
+}
+
 /* =================== INTERACT PROMPT =================== */
 #interactPrompt {
   position: fixed;

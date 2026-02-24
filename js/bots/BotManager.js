@@ -59,6 +59,16 @@ export class BotManager {
       bot.startHideCode(spot, (pos) => {
         if (this._onCodePlaced) this._onCodePlaced(pos, code);
       });
+
+      // Fallback: if bot is still walking after 25s, drop the note where it stands
+      setTimeout(() => {
+        if (bot._onCodePlaced) {
+          const pos = bot.mesh.position.clone();
+          bot._onCodePlaced(pos);
+          bot._onCodePlaced = null;
+          bot._codePlaced = true;
+        }
+      }, 25000);
     });
   }
 

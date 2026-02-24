@@ -28,14 +28,15 @@ export const FRIENDLY_PATROL = [
   new THREE.Vector3(30, 1.7, 25),
 ];
 
-// Code note hiding spots (enemy bots walk here during HIDE phase)
+// Code note hiding spots — kept in the mid zone, reachable from both sides.
+// Biased toward the player's half (lower Z) so they're easier to find.
 export const CODE_HIDE_SPOTS = [
-  new THREE.Vector3(10, 0, 35),
-  new THREE.Vector3(18, 0, 28),
-  new THREE.Vector3(28, 0, 42),
-  new THREE.Vector3(42, 0, 36),
-  new THREE.Vector3(50, 0, 45),
-  new THREE.Vector3(15, 0, 55),
-  new THREE.Vector3(45, 0, 55),
-  new THREE.Vector3(30, 0, 50),
+  new THREE.Vector3(12, 0, 28),
+  new THREE.Vector3(22, 0, 25),
+  new THREE.Vector3(30, 0, 32),
+  new THREE.Vector3(38, 0, 27),
+  new THREE.Vector3(48, 0, 30),
+  new THREE.Vector3(15, 0, 38),
+  new THREE.Vector3(45, 0, 38),
+  new THREE.Vector3(30, 0, 42),
 ];
