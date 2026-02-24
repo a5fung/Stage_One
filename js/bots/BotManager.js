@@ -52,24 +52,29 @@ export class BotManager {
       [spots[i], spots[j]] = [spots[j], spots[i]];
     }
 
-    this.enemyBots.forEach((bot, i) => {
-      const spot = spots[i % spots.length];
-      const code = String(1000 + Math.floor(Math.random() * 9000));
-      bot._assignedCode = code;
-      bot.startHideCode(spot, (pos) => {
-        if (this._onCodePlaced) this._onCodePlaced(pos, code);
-      });
-
-      // Fallback: if bot is still walking after 25s, drop the note where it stands
-      setTimeout(() => {
-        if (bot._onCodePlaced) {
-          const pos = bot.mesh.position.clone();
-          bot._onCodePlaced(pos);
-          bot._onCodePlaced = null;
-          bot._codePlaced = true;
-        }
-      }, 25000);
+    // Only one enemy bot hides the code
+    const runner = this.enemyBots[0];
+    const spot   = spots[0];
+    const code   = String(1000 + Math.floor(Math.random() * 9000));
+    runner._assignedCode = code;
+    runner.startHideCode(spot, (pos) => {
+      if (this._onCodePlaced) this._onCodePlaced(pos, code);
     });
+
+    // Fallback: drop note at current position after 25s if bot gets stuck
+    setTimeout(() => {
+      if (runner._onCodePlaced) {
+        const pos = runner.mesh.position.clone();
+        runner._onCodePlaced(pos);
+        runner._onCodePlaced = null;
+        runner._codePlaced = true;
+      }
+    }, 25000);
+
+    // Remaining enemy bots just patrol during HIDE phase
+    for (let i = 1; i < this.enemyBots.length; i++) {
+      this.enemyBots[i].state = 'PATROL';
+    }
   }
 
   // MAIN phase: switch bots to patrol/combat; designate one enemy as bomb-runner

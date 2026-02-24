@@ -23,19 +23,7 @@ class CodeNote {
     this.mesh.position.y = 1.3;
     scene.add(this.mesh);
 
-    // Vertical beacon column so it's visible from across the map
-    const beamGeo = new THREE.CylinderGeometry(0.04, 0.04, 4.0, 6);
-    const beamMat = new THREE.MeshBasicMaterial({
-      color: 0xffdd00,
-      transparent: true,
-      opacity: 0.35,
-    });
-    this.beam = new THREE.Mesh(beamGeo, beamMat);
-    this.beam.position.copy(position);
-    this.beam.position.y = 2.5;
-    scene.add(this.beam);
-
-    // Bright glow light — visible from further away
+    // Glow light
     this.light = new THREE.PointLight(0xffcc00, 1.8, 8);
     this.light.position.copy(this.mesh.position);
     scene.add(this.light);
@@ -85,21 +73,15 @@ class CodeNote {
     this.mesh.position.y = y;
     this.mesh.rotation.y += delta * 1.2;
     this.light.position.copy(this.mesh.position);
-
-    // Pulse the beam opacity
-    this.beam.material.opacity = 0.2 + Math.abs(Math.sin(this._time * 0.8)) * 0.3;
   }
 
   collect() {
     this.collected = true;
     this.scene.remove(this.mesh);
-    this.scene.remove(this.beam);
     this.scene.remove(this.light);
     this.mesh.geometry.dispose();
     if (this.mesh.material.map) this.mesh.material.map.dispose();
     this.mesh.material.dispose();
-    this.beam.geometry.dispose();
-    this.beam.material.dispose();
   }
 
   distanceTo(pos) {
