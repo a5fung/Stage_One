@@ -135,8 +135,8 @@ export class HUD {
   resetTimerDisplay() {
     this._prevTeamTime  = '';
     this._prevEnemyTime = '';
-    this.els.teamTime.textContent  = '15:00';
-    this.els.enemyTime.textContent = '15:00';
+    this.els.teamTime.textContent  = '3:00';
+    this.els.enemyTime.textContent = '3:00';
     this.els.teamTimer.classList.remove('pulse');
     this.els.enemyTimer.classList.remove('pulse');
   }

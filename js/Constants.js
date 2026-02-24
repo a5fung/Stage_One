@@ -18,8 +18,8 @@ export const BOT_DETECTION_RADIUS = 22;
 export const BOT_ATTACK_RANGE     = 20;
 export const BOT_LOS_INTERVAL     = 0.2;   // seconds between LOS checks
 
-export const HIDE_PHASE_DURATION  = 60;    // seconds
-export const BOMB_TIMER_DURATION  = 900;   // 15 minutes in seconds
+export const HIDE_PHASE_DURATION  = 30;    // seconds
+export const BOMB_TIMER_DURATION  = 180;   // 3 minutes in seconds
 export const INTERACT_RANGE       = 2.5;
 
 export const MAP_WIDTH            = 60;
