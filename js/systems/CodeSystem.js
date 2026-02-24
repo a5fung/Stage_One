@@ -9,13 +9,14 @@ class CodeNote {
     this.collected = false;
     this._time     = Math.random() * Math.PI * 2;
 
-    // Large, bright card — visible from a distance
-    const geo  = new THREE.PlaneGeometry(0.55, 0.38);
-    const mat  = new THREE.MeshLambertMaterial({
-      color: 0xffee44,
+    // Large card with code number drawn as a canvas texture
+    const geo = new THREE.PlaneGeometry(0.55, 0.38);
+    const mat = new THREE.MeshLambertMaterial({
+      map: this._makeCodeTexture(code),
       emissive: 0xffcc00,
-      emissiveIntensity: 1.2,
+      emissiveIntensity: 0.6,
       side: THREE.DoubleSide,
+      transparent: false,
     });
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.position.copy(position);
@@ -40,6 +41,44 @@ class CodeNote {
     scene.add(this.light);
   }
 
+  _makeCodeTexture(code) {
+    const canvas = document.createElement('canvas');
+    canvas.width  = 256;
+    canvas.height = 176;
+    const ctx = canvas.getContext('2d');
+
+    // Card background
+    ctx.fillStyle = '#fffde7';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Border
+    ctx.strokeStyle = '#e6b800';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+    // "CODE" label
+    ctx.fillStyle = '#888';
+    ctx.font = 'bold 22px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('DEFUSE CODE', canvas.width / 2, 44);
+
+    // Divider line
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 58);
+    ctx.lineTo(canvas.width - 20, 58);
+    ctx.stroke();
+
+    // Code number — large and prominent
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 72px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(code, canvas.width / 2, 138);
+
+    return new THREE.CanvasTexture(canvas);
+  }
+
   update(delta) {
     this._time += delta * CODE_NOTE_BOB_SPEED;
     const y = 1.3 + Math.sin(this._time) * CODE_NOTE_BOB_AMP;
@@ -57,6 +96,7 @@ class CodeNote {
     this.scene.remove(this.beam);
     this.scene.remove(this.light);
     this.mesh.geometry.dispose();
+    if (this.mesh.material.map) this.mesh.material.map.dispose();
     this.mesh.material.dispose();
     this.beam.geometry.dispose();
     this.beam.material.dispose();
