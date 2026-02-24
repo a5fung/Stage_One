@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Bot, STATE } from './Bot.js';
 import { ENEMY_SPAWNS, FRIENDLY_SPAWNS, TEAM_BOMB_POS } from '../world/SpawnPoints.js';
-import { ENEMY_PATROL, FRIENDLY_PATROL, CODE_HIDE_SPOTS } from './Waypoints.js';
+import { ENEMY_PATROL, FRIENDLY_PATROL_ROUTES, CODE_HIDE_SPOTS } from './Waypoints.js';
 import { gameState } from '../GameState.js';
 
 export class BotManager {
@@ -31,11 +31,11 @@ export class BotManager {
       this.allBots.push(bot);
     }
 
-    // 4 friendly bots
+    // 4 friendly bots — each gets its own lane patrol route
     for (let i = 0; i < 4; i++) {
       const spawn = FRIENDLY_SPAWNS[i].clone();
-      const bot   = new Bot(this.scene, spawn, 'friendly', FRIENDLY_PATROL);
-      bot.currentWaypoint = (i * 2) % FRIENDLY_PATROL.length;
+      const route = FRIENDLY_PATROL_ROUTES[i];
+      const bot   = new Bot(this.scene, spawn, 'friendly', route);
       this.friendlyBots.push(bot);
       this.allBots.push(bot);
     }
@@ -130,7 +130,7 @@ export class BotManager {
   }
 
   _updateFriendlyTarget(bot, wallMeshes) {
-    // Clear dead target
+    // Drop dead targets
     if (bot.chaseTargetBot && bot.chaseTargetBot.dead) {
       bot.chaseTargetBot = null;
       if (bot.state === STATE.CHASE || bot.state === STATE.ATTACK) {
@@ -138,22 +138,33 @@ export class BotManager {
       }
     }
 
-    // Find closest visible enemy bot if not already targeting
-    if (!bot.chaseTargetBot) {
-      let closest = null;
-      let closestDist = Infinity;
-      for (const enemy of this.enemyBots) {
-        if (enemy.dead) continue;
-        const dist = bot._dist2D(bot.mesh.position, enemy.mesh.position);
-        if (dist < 22 && dist < closestDist) {
-          closestDist = dist;
-          closest = enemy;
+    // Always find the closest living enemy — no distance cap.
+    // Re-evaluate every frame so bots switch to a nearer target if one appears.
+    let closest = null;
+    let closestDist = Infinity;
+    for (const enemy of this.enemyBots) {
+      if (enemy.dead) continue;
+      const dist = bot._dist2D(bot.mesh.position, enemy.mesh.position);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = enemy;
+      }
+    }
+
+    if (closest) {
+      if (bot.chaseTargetBot !== closest) {
+        // Switched to a closer target
+        bot.chaseTargetBot = closest;
+        if (bot.state === STATE.PATROL || bot.state === STATE.ALERT) {
+          bot.state = STATE.CHASE;
+          bot._stateTimer = 0;
         }
       }
-      if (closest) {
-        bot.chaseTargetBot = closest;
-        bot.state = STATE.CHASE;
-        bot._stateTimer = 0;
+    } else {
+      // All enemies dead — go back to patrol
+      bot.chaseTargetBot = null;
+      if (bot.state === STATE.CHASE || bot.state === STATE.ATTACK) {
+        bot.state = STATE.PATROL;
       }
     }
   }

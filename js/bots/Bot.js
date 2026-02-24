@@ -221,9 +221,16 @@ export class Bot {
       this._losTimer = 0;
       const dist = this._dist2D(this.mesh.position, chasePos);
 
-      if (!this._canSeePosition(chasePos, wallMeshes)) {
-        this.state = STATE.ALERT;
-        this._stateTimer = 0;
+      const canSee = this._canSeePosition(chasePos, wallMeshes);
+
+      if (!canSee) {
+        // Enemy bots go ALERT when they lose the player (realistic).
+        // Friendly bots keep pushing toward their target regardless of LOS —
+        // they know where the enemy is via radio.
+        if (this.team === 'enemy') {
+          this.state = STATE.ALERT;
+          this._stateTimer = 0;
+        }
         return;
       }
       if (dist <= C.BOT_ATTACK_RANGE) {
@@ -240,7 +247,7 @@ export class Bot {
       this._losTimer = 0;
       const dist = this._dist2D(this.mesh.position, chasePos);
 
-      if (!this._canSeePosition(chasePos, wallMeshes) || dist > C.BOT_ATTACK_RANGE + 3) {
+      if (!this._canSeePosition(chasePos, wallMeshes, C.BOT_ATTACK_RANGE + 5) || dist > C.BOT_ATTACK_RANGE + 3) {
         this.state = STATE.CHASE;
         this._stateTimer = 0;
         return;
@@ -305,14 +312,15 @@ export class Bot {
     this.mesh.rotation.y = Math.atan2(dx, dz);
   }
 
-  _canSeePosition(pos, wallMeshes) {
+  _canSeePosition(pos, wallMeshes, maxDist) {
     const origin = this.mesh.position.clone();
     origin.y = 1.4;
     const target = pos.clone();
     target.y = 1.4;
     const dir = new THREE.Vector3().subVectors(target, origin);
     const dist = dir.length();
-    if (dist > C.BOT_DETECTION_RADIUS) return false;
+    const limit = maxDist !== undefined ? maxDist : C.BOT_DETECTION_RADIUS;
+    if (dist > limit) return false;
     dir.normalize();
 
     const ray = new THREE.Raycaster(origin, dir, 0.1, dist);
