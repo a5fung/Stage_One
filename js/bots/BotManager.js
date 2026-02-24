@@ -109,6 +109,12 @@ export class BotManager {
       this._updateFriendlyTarget(bot, wallMeshes);
     }
 
+    // --- Update enemy bot targeting (player vs. friendly bots) ---
+    for (const bot of this.enemyBots) {
+      if (bot.dead) continue;
+      this._updateEnemyTarget(bot, playerPos);
+    }
+
     // --- Update all bots ---
     for (const bot of this.allBots) {
       if (bot.dead) continue;
@@ -116,10 +122,14 @@ export class BotManager {
     }
 
     // --- Resolve shots ---
-    // Enemy bots shoot the player
+    // Enemy bots shoot their current target (player or nearest friendly bot)
     for (const bot of this.enemyBots) {
       if (bot.dead || !bot._lastShot) continue;
-      bot.consumeShot(player);
+      if (bot.chaseTargetBot && !bot.chaseTargetBot.dead) {
+        bot.consumeShot(bot.chaseTargetBot);
+      } else {
+        bot.consumeShot(player);
+      }
     }
 
     // Friendly bots shoot enemy bots
@@ -171,6 +181,37 @@ export class BotManager {
       if (bot.state === STATE.CHASE || bot.state === STATE.ATTACK) {
         bot.state = STATE.PATROL;
       }
+    }
+  }
+
+  _updateEnemyTarget(bot, playerPos) {
+    // Don't interrupt bots on special missions
+    if (bot.state === STATE.DEFUSE || bot.state === STATE.HIDE_CODE) return;
+
+    // Drop dead target
+    if (bot.chaseTargetBot && bot.chaseTargetBot.dead) {
+      bot.chaseTargetBot = null;
+    }
+
+    // Find closest living friendly bot
+    let closestFriendly = null;
+    let closestFriendlyDist = Infinity;
+    for (const fb of this.friendlyBots) {
+      if (fb.dead) continue;
+      const d = bot._dist2D(bot.mesh.position, fb.mesh.position);
+      if (d < closestFriendlyDist) {
+        closestFriendlyDist = d;
+        closestFriendly = fb;
+      }
+    }
+
+    const playerDist = bot._dist2D(bot.mesh.position, playerPos);
+
+    // Target whoever is nearest — friendly bot or player
+    if (closestFriendly && closestFriendlyDist < playerDist) {
+      bot.chaseTargetBot = closestFriendly;
+    } else {
+      bot.chaseTargetBot = null; // null = falls back to playerPos in bot.update()
     }
   }
 

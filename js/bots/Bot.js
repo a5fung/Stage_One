@@ -102,6 +102,16 @@ export class Bot {
     this._hpTexture.needsUpdate = true;
   }
 
+  // Shared position interface — lets consumeShot() and BotManager treat
+  // Bot and Player uniformly. Returns chest/head height in world space.
+  get position() {
+    return new THREE.Vector3(
+      this.mesh.position.x,
+      this.mesh.position.y + 1.0,
+      this.mesh.position.z
+    );
+  }
+
   takeDamage(amount) {
     if (this.dead) return;
     this.hp -= amount;
@@ -342,6 +352,13 @@ export class Bot {
     const dir = new THREE.Vector3(dx, dy, dz).normalize();
     const ray = new THREE.Raycaster(origin, dir, 0, C.BOT_ATTACK_RANGE + 3);
     this._lastShot = { ray, damage: C.BOT_DAMAGE };
+
+    // Muzzle flash — briefly illuminate the gun stub
+    const mat = this.gunStub.material;
+    mat.emissive.setHex(0xffaa00);
+    setTimeout(() => {
+      if (!this.dead && this.gunStub) mat.emissive.setHex(0x000000);
+    }, 90);
   }
 
   // Called by BotManager to apply the queued shot to a target
