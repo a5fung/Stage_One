@@ -630,6 +630,13 @@ kbd {
   margin-bottom: 40px;
 }
 
+.end-btn-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 /* =================== NOTE COMPASS =================== */
 #noteCompass {
   position: fixed;

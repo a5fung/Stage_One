@@ -197,6 +197,13 @@ document.getElementById('playAgainBtn').addEventListener('click', () => {
   }
 });
 
+document.getElementById('mainMenuBtn').addEventListener('click', () => {
+  document.getElementById('endScreen').classList.add('hidden');
+  gameState.transition('MENU');
+  hud.showMenu();
+  player.unlock();
+});
+
 canvas.addEventListener('click', () => {
   if ((gameState.is('MAIN') || gameState.is('HIDE')) && !player.isInCodePanel && !input._isMobile) {
     try { player.requestLock(); } catch(e) {}
