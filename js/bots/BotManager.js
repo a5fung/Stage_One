@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Bot, STATE } from './Bot.js';
-import { ENEMY_SPAWNS, FRIENDLY_SPAWNS, TEAM_BOMB_POS } from '../world/SpawnPoints.js';
-import { ENEMY_PATROL, FRIENDLY_PATROL_ROUTES, CODE_HIDE_SPOTS } from './Waypoints.js';
+import { ENEMY_SPAWNS, FRIENDLY_SPAWNS, TEAM_BOMB_POS, ENEMY_BOMB_POS } from '../world/SpawnPoints.js';
+import { ENEMY_PATROL, FRIENDLY_PATROL_ROUTES, FRIENDLY_HIDE_SPOTS, ENEMY_HIDE_SPOTS } from './Waypoints.js';
 import { gameState } from '../GameState.js';
+import * as C from '../Constants.js';
 
 export class BotManager {
   constructor(scene, collisionMap) {
@@ -13,103 +14,147 @@ export class BotManager {
     this.friendlyBots = [];
     this.allBots      = [];
 
-    this._onCodePlaced       = null;
-    this._onTeamBombDefused  = null;
+    this._onFriendlyCodePlaced = null;
+    this._onEnemyCodePlaced    = null;
+    this._onEnemyBombDefused   = null;
+
+    // Kill tracking
+    this.friendlyKillCount = 0; // killed by player / friendly bots
+    this.enemyKillCount    = 0; // killed by enemy bots
+
+    this._respawnQueue = [];
   }
 
   spawnAll() {
+    this._spawnWithData(ENEMY_SPAWNS, FRIENDLY_SPAWNS, ENEMY_PATROL, FRIENDLY_PATROL_ROUTES);
+  }
+
+  // Stage-aware spawn: accepts any spawn/patrol data
+  _spawnWithData(enemySpawns, friendlySpawns, enemyPatrol, friendlyRoutes) {
     this.enemyBots    = [];
     this.friendlyBots = [];
     this.allBots      = [];
+    this.friendlyKillCount = 0;
+    this.enemyKillCount    = 0;
+    this._respawnQueue     = [];
 
-    // 5 enemy bots — stagger waypoint starting index
     for (let i = 0; i < 5; i++) {
-      const spawn = ENEMY_SPAWNS[i].clone();
-      const bot   = new Bot(this.scene, spawn, 'enemy', ENEMY_PATROL);
-      bot.currentWaypoint = (i * 2) % ENEMY_PATROL.length;
+      const spawn = enemySpawns[i].clone();
+      const bot   = new Bot(this.scene, spawn, 'enemy', enemyPatrol);
+      bot.currentWaypoint = (i * 2) % enemyPatrol.length;
       this.enemyBots.push(bot);
       this.allBots.push(bot);
     }
 
-    // 4 friendly bots — each gets its own lane patrol route
     for (let i = 0; i < 4; i++) {
-      const spawn = FRIENDLY_SPAWNS[i].clone();
-      const route = FRIENDLY_PATROL_ROUTES[i];
+      const spawn = friendlySpawns[i].clone();
+      const route = friendlyRoutes[i];
       const bot   = new Bot(this.scene, spawn, 'friendly', route);
       this.friendlyBots.push(bot);
       this.allBots.push(bot);
     }
   }
 
-  // HIDE phase: assign code-hiding tasks to enemy bots
-  startHidePhase(onCodePlaced) {
-    this._onCodePlaced = onCodePlaced;
+  // HIDE phase: one friendly bot and one enemy bot each hide a code
+  // friendlySpots / enemySpots are stage-specific arrays (defaults to Stage 1)
+  startHidePhase(onFriendlyCodePlaced, onEnemyCodePlaced, friendlySpots, enemySpots) {
+    this._onFriendlyCodePlaced = onFriendlyCodePlaced;
+    this._onEnemyCodePlaced    = onEnemyCodePlaced;
 
-    // Shuffle spots
-    const spots = [...CODE_HIDE_SPOTS];
-    for (let i = spots.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [spots[i], spots[j]] = [spots[j], spots[i]];
-    }
-
-    // Only one enemy bot hides the code
-    const runner = this.enemyBots[0];
-    const spot   = spots[0];
-    const code   = String(1000 + Math.floor(Math.random() * 9000));
-    runner._assignedCode = code;
-    runner.startHideCode(spot, (pos) => {
-      if (this._onCodePlaced) this._onCodePlaced(pos, code);
+    // --- Friendly code runner ---
+    const fSpots = friendlySpots ? [...friendlySpots] : [...FRIENDLY_HIDE_SPOTS];
+    _shuffle(fSpots);
+    const friendlyRunner = this.friendlyBots[0];
+    const friendlyCode   = String(1000 + Math.floor(Math.random() * 9000));
+    friendlyRunner._assignedCode = friendlyCode;
+    friendlyRunner.startHideCode(fSpots[0], (pos) => {
+      if (this._onFriendlyCodePlaced) this._onFriendlyCodePlaced(pos, friendlyCode);
     });
 
-    // Fallback: drop note at current position after 25s if bot gets stuck
+    // Fallback: drop friendly note after 25s if bot gets stuck
     setTimeout(() => {
-      if (runner._onCodePlaced) {
-        const pos = runner.mesh.position.clone();
-        runner._onCodePlaced(pos);
-        runner._onCodePlaced = null;
-        runner._codePlaced = true;
+      if (friendlyRunner._onCodePlaced) {
+        const pos = friendlyRunner.mesh.position.clone();
+        friendlyRunner._onCodePlaced(pos);
+        friendlyRunner._onCodePlaced = null;
+        friendlyRunner._codePlaced = true;
       }
     }, 25000);
 
-    // Remaining enemy bots just patrol during HIDE phase
+    // --- Enemy code runner ---
+    const eSpots = enemySpots ? [...enemySpots] : [...ENEMY_HIDE_SPOTS];
+    _shuffle(eSpots);
+    const enemyRunner = this.enemyBots[0];
+    const enemyCode   = String(1000 + Math.floor(Math.random() * 9000));
+    enemyRunner._assignedCode = enemyCode;
+    enemyRunner.startHideCode(eSpots[0], (pos) => {
+      if (this._onEnemyCodePlaced) this._onEnemyCodePlaced(pos, enemyCode);
+    });
+
+    // Fallback for enemy runner
+    setTimeout(() => {
+      if (enemyRunner._onCodePlaced) {
+        const pos = enemyRunner.mesh.position.clone();
+        enemyRunner._onCodePlaced(pos);
+        enemyRunner._onCodePlaced = null;
+        enemyRunner._codePlaced = true;
+      }
+    }, 25000);
+
+    // Other enemy bots patrol during HIDE
     for (let i = 1; i < this.enemyBots.length; i++) {
-      this.enemyBots[i].state = 'PATROL';
+      this.enemyBots[i].state = STATE.PATROL;
+    }
+    // Other friendly bots patrol during HIDE
+    for (let i = 1; i < this.friendlyBots.length; i++) {
+      this.friendlyBots[i].state = STATE.PATROL;
     }
   }
 
-  // MAIN phase: switch bots to patrol/combat; designate one enemy as bomb-runner
-  startMainPhase(onTeamBombDefused) {
-    this._onTeamBombDefused = onTeamBombDefused;
+  // MAIN phase: bots patrol/fight; enemy runner goes to ENEMY bomb (their own bomb)
+  startMainPhase(onEnemyBombDefused, enemyBombPos) {
+    this._onEnemyBombDefused = onEnemyBombDefused;
+    const bombTarget = enemyBombPos || ENEMY_BOMB_POS;
 
     for (const bot of this.enemyBots) {
-      if (!bot.dead && (bot.state === STATE.HIDE_CODE)) {
-        bot.state = STATE.PATROL;
-      }
+      if (!bot.dead && bot.state === STATE.HIDE_CODE) bot.state = STATE.PATROL;
     }
     for (const bot of this.friendlyBots) {
-      if (!bot.dead) bot.state = STATE.PATROL;
+      if (!bot.dead && bot.state === STATE.HIDE_CODE) bot.state = STATE.PATROL;
     }
 
-    // One living enemy bot becomes the defuse runner
+    // Enemy runner walks to their OWN bomb to defuse it
     const runner = this.enemyBots.find(b => !b.dead);
     if (runner) {
-      runner.startDefuseMission(TEAM_BOMB_POS, () => {
-        if (this._onTeamBombDefused) this._onTeamBombDefused();
+      runner.startDefuseMission(bombTarget, () => {
+        if (this._onEnemyBombDefused) this._onEnemyBombDefused();
       });
     }
+  }
+
+  getKillCounts() {
+    return { friendly: this.friendlyKillCount, enemy: this.enemyKillCount };
+  }
+
+  // Called when player shoots and kills an enemy bot
+  onPlayerKill(bot) {
+    this.friendlyKillCount++;
+    this._scheduleRespawn(bot);
+  }
+
+  _scheduleRespawn(bot) {
+    this._respawnQueue.push({ bot, timer: C.BOT_RESPAWN_TIME });
   }
 
   update(delta, player, wallMeshes) {
     const playerPos = player.position.clone();
     playerPos.y = 1.7;
 
-    // --- Update friendly bot targeting BEFORE updating bots ---
+    // --- Update targeting for all teams ---
     for (const bot of this.friendlyBots) {
       if (bot.dead) continue;
       this._updateFriendlyTarget(bot, wallMeshes);
     }
-
-    // --- Update enemy bot targeting (player vs. friendly bots) ---
     for (const bot of this.enemyBots) {
       if (bot.dead) continue;
       this._updateEnemyTarget(bot, playerPos);
@@ -122,11 +167,16 @@ export class BotManager {
     }
 
     // --- Resolve shots ---
-    // Enemy bots shoot their current target (player or nearest friendly bot)
+    // Enemy bots shoot their nearest threat (player or friendly bot)
     for (const bot of this.enemyBots) {
       if (bot.dead || !bot._lastShot) continue;
       if (bot.chaseTargetBot && !bot.chaseTargetBot.dead) {
+        const wasDead = bot.chaseTargetBot.dead;
         bot.consumeShot(bot.chaseTargetBot);
+        if (!wasDead && bot.chaseTargetBot.dead) {
+          this.enemyKillCount++;
+          this._scheduleRespawn(bot.chaseTargetBot);
+        }
       } else {
         bot.consumeShot(player);
       }
@@ -137,15 +187,29 @@ export class BotManager {
       if (bot.dead || !bot._lastShot) continue;
       const target = bot.chaseTargetBot;
       if (target && !target.dead) {
+        const wasDead = target.dead;
         bot.consumeShot(target);
+        if (!wasDead && target.dead) {
+          this.friendlyKillCount++;
+          this._scheduleRespawn(target);
+        }
       } else {
         bot._lastShot = null;
       }
     }
+
+    // --- Process respawn queue ---
+    this._respawnQueue = this._respawnQueue.filter(entry => {
+      entry.timer -= delta;
+      if (entry.timer <= 0) {
+        entry.bot.respawn();
+        return false;
+      }
+      return true;
+    });
   }
 
   _updateFriendlyTarget(bot, wallMeshes) {
-    // Drop dead targets
     if (bot.chaseTargetBot && bot.chaseTargetBot.dead) {
       bot.chaseTargetBot = null;
       if (bot.state === STATE.CHASE || bot.state === STATE.ATTACK) {
@@ -153,8 +217,6 @@ export class BotManager {
       }
     }
 
-    // Always find the closest living enemy — no distance cap.
-    // Re-evaluate every frame so bots switch to a nearer target if one appears.
     let closest = null;
     let closestDist = Infinity;
     for (const enemy of this.enemyBots) {
@@ -168,7 +230,6 @@ export class BotManager {
 
     if (closest) {
       if (bot.chaseTargetBot !== closest) {
-        // Switched to a closer target
         bot.chaseTargetBot = closest;
         if (bot.state === STATE.PATROL || bot.state === STATE.ALERT) {
           bot.state = STATE.CHASE;
@@ -176,7 +237,6 @@ export class BotManager {
         }
       }
     } else {
-      // All enemies dead — go back to patrol
       bot.chaseTargetBot = null;
       if (bot.state === STATE.CHASE || bot.state === STATE.ATTACK) {
         bot.state = STATE.PATROL;
@@ -185,15 +245,12 @@ export class BotManager {
   }
 
   _updateEnemyTarget(bot, playerPos) {
-    // Don't interrupt bots on special missions
     if (bot.state === STATE.DEFUSE || bot.state === STATE.HIDE_CODE) return;
 
-    // Drop dead target
     if (bot.chaseTargetBot && bot.chaseTargetBot.dead) {
       bot.chaseTargetBot = null;
     }
 
-    // Find closest living friendly bot
     let closestFriendly = null;
     let closestFriendlyDist = Infinity;
     for (const fb of this.friendlyBots) {
@@ -207,24 +264,20 @@ export class BotManager {
 
     const playerDist = bot._dist2D(bot.mesh.position, playerPos);
 
-    // Target whoever is nearest — friendly bot or player
     if (closestFriendly && closestFriendlyDist < playerDist) {
       bot.chaseTargetBot = closestFriendly;
     } else {
-      bot.chaseTargetBot = null; // null = falls back to playerPos in bot.update()
+      bot.chaseTargetBot = null; // falls back to playerPos in bot.update()
     }
   }
 
-  // Get all living enemy bot meshes for hit-test raycasting
   getEnemyMeshes() {
     return this.enemyBots.filter(b => !b.dead).map(b => b.mesh);
   }
 
-  // Resolve shot → which bot was hit? Walk up mesh hierarchy.
   getBotFromMesh(mesh) {
     for (const bot of this.allBots) {
       if (bot.mesh === mesh) return bot;
-      // Check children
       let found = false;
       bot.mesh.traverse(child => { if (child === mesh) found = true; });
       if (found) return bot;
@@ -232,11 +285,9 @@ export class BotManager {
     return null;
   }
 
-  // Remove all bots from scene
   reset() {
     for (const bot of this.allBots) {
       this.scene.remove(bot.mesh);
-      // Dispose geometries/materials
       bot.mesh.traverse(obj => {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) obj.material.dispose();
@@ -245,5 +296,15 @@ export class BotManager {
     this.enemyBots    = [];
     this.friendlyBots = [];
     this.allBots      = [];
+    this._respawnQueue = [];
+    this.friendlyKillCount = 0;
+    this.enemyKillCount    = 0;
+  }
+}
+
+function _shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }

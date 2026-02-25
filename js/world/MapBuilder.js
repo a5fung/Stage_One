@@ -13,9 +13,11 @@ export class MapBuilder {
     this.scene = scene;
     this.cm = collisionMap;
     this.wallMeshes = [];
+    this.nonWallMeshes = [];  // floor, ceiling — need cleanup on stage switch
   }
 
   build() {
+    this.cm.setMapDimensions(C.MAP_WIDTH, C.MAP_DEPTH);
     this._buildFloor();
     this._buildOuterWalls();
     this._buildArcWall(30, 15, Math.PI, true);   // player-side arc (concave, opens toward Z+)
@@ -40,6 +42,7 @@ export class MapBuilder {
     mesh.position.set(C.MAP_WIDTH / 2, 0, C.MAP_DEPTH / 2);
     mesh.receiveShadow = true;
     this.scene.add(mesh);
+    this.nonWallMeshes.push(mesh);
 
     // Ceiling (same dims, flipped)
     const ceilGeo = new THREE.PlaneGeometry(C.MAP_WIDTH, C.MAP_DEPTH);
@@ -47,6 +50,7 @@ export class MapBuilder {
     ceil.rotation.x = -Math.PI / 2;
     ceil.position.set(C.MAP_WIDTH / 2, C.WALL_HEIGHT, C.MAP_DEPTH / 2);
     this.scene.add(ceil);
+    this.nonWallMeshes.push(ceil);
   }
 
   _buildOuterWalls() {

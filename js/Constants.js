@@ -12,11 +12,12 @@ export const RELOAD_TIME          = 2.0;
 export const BOT_HP               = 200;
 export const BOT_WALK_SPEED       = 3.5;
 export const BOT_RUN_SPEED        = 6.0;
-export const BOT_DAMAGE           = 15;
-export const BOT_FIRE_INTERVAL    = 0.9;
+export const BOT_DAMAGE           = 12;    // reduced for more even matches
+export const BOT_FIRE_INTERVAL    = 1.0;   // slightly slower fire rate
 export const BOT_DETECTION_RADIUS = 22;
 export const BOT_ATTACK_RANGE     = 20;
 export const BOT_LOS_INTERVAL     = 0.2;   // seconds between LOS checks
+export const BOT_RESPAWN_TIME     = 5.0;   // seconds before a dead bot respawns
 
 export const HIDE_PHASE_DURATION  = 30;    // seconds
 export const BOMB_TIMER_DURATION  = 180;   // 3 minutes in seconds

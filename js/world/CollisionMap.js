@@ -7,6 +7,18 @@ export class CollisionMap {
   constructor() {
     this.boxes = [];        // Array<THREE.Box3>
     this.wallMeshes = [];   // Array<THREE.Mesh> — used by LOS raycaster
+    this._mapW = 60;
+    this._mapD = 80;
+  }
+
+  setMapDimensions(w, d) {
+    this._mapW = w;
+    this._mapD = d;
+  }
+
+  reset() {
+    this.boxes = [];
+    this.wallMeshes = [];
   }
 
   addBox(box3) {
@@ -69,9 +81,11 @@ export class CollisionMap {
     return position;
   }
 
-  // Keep position within map bounds
+  // Keep position within map bounds (uses stored dimensions if none passed)
   clampToMap(position, mapW, mapD, margin = 0.5) {
-    position.x = Math.max(margin, Math.min(mapW - margin, position.x));
-    position.z = Math.max(margin, Math.min(mapD - margin, position.z));
+    const w = mapW !== undefined ? mapW : this._mapW;
+    const d = mapD !== undefined ? mapD : this._mapD;
+    position.x = Math.max(margin, Math.min(w - margin, position.x));
+    position.z = Math.max(margin, Math.min(d - margin, position.z));
   }
 }

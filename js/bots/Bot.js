@@ -13,9 +13,9 @@ export const STATE = {
   DEAD      : 'DEAD',
 };
 
-const ENEMY_COLOR    = 0xcc3333;
-const FRIENDLY_COLOR = 0x3388cc;
-const DEAD_COLOR     = 0x555555;
+const DEAD_COLOR  = 0x555555;
+const SKIN_COLOR  = 0xffcc88;
+const DARK_COLOR  = 0x111111;
 
 export class Bot {
   constructor(scene, position, team, patrolWaypoints) {
@@ -28,21 +28,17 @@ export class Bot {
     this.patrolWaypoints = patrolWaypoints || [];
     this.currentWaypoint = 0;
 
-    this._losTimer    = Math.random() * C.BOT_LOS_INTERVAL; // stagger LOS checks
+    this._losTimer    = Math.random() * C.BOT_LOS_INTERVAL;
     this._fireTimer   = 0;
     this._stateTimer  = 0;
 
-    // Who this bot is currently chasing/attacking
-    // BotManager sets this; it's a Bot reference (for friendly bots targeting enemies)
     this.chaseTargetBot = null;
-    this.lastKnownPos   = null; // THREE.Vector3
+    this.lastKnownPos   = null;
 
-    // HIDE_CODE data
     this._hideSpot       = null;
     this._onCodePlaced   = null;
     this._codePlaced     = false;
 
-    // DEFUSE data
     this._defuseSpot     = null;
     this._defuseCallback = null;
     this._defuseTimer    = 0;
@@ -52,26 +48,71 @@ export class Bot {
     this._buildMesh(position);
   }
 
-  _buildMesh(position) {
-    const color = this.team === 'enemy' ? ENEMY_COLOR : FRIENDLY_COLOR;
-    const mat   = () => new THREE.MeshLambertMaterial({ color });
-    const darkMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+  // Unified position interface — chest height, works with consumeShot and BotManager
+  get position() {
+    return new THREE.Vector3(
+      this.mesh.position.x,
+      this.mesh.position.y + 1.3,
+      this.mesh.position.z
+    );
+  }
 
-    // Body
-    this.bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.1, 0.4), mat());
-    // Head
-    this.headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mat());
-    this.headMesh.position.y = 0.75;
-    // Gun stub
-    this.gunStub  = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.30), darkMat);
-    this.gunStub.position.set(0.25, 0.1, -0.25);
+  _buildMesh(position) {
+    const teamColor  = this.team === 'enemy' ? 0xff3333 : 0x3399ff;
+    const bodyAccent = this.team === 'enemy' ? 0xcc1111 : 0x1166cc;
+    this._teamColor  = teamColor;
+    this._bodyAccent = bodyAccent;
+    this._spawnPos   = new THREE.Vector3(position.x, 0, position.z);
+
+    const mat = c => new THREE.MeshLambertMaterial({ color: c });
+
+    // --- Legs ---
+    this.leftLeg  = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.62, 0.25), mat(teamColor));
+    this.rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.62, 0.25), mat(teamColor));
+    this.leftLeg.position.set(-0.14, 0.31, 0);
+    this.rightLeg.position.set( 0.14, 0.31, 0);
+
+    // --- Body / torso ---
+    this.bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.72, 0.32), mat(bodyAccent));
+    this.bodyMesh.position.set(0, 0.93, 0);
+
+    // --- Arms ---
+    this.leftArm  = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.65, 0.22), mat(teamColor));
+    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.65, 0.22), mat(teamColor));
+    this.leftArm.position.set(-0.39, 0.93, 0);
+    this.rightArm.position.set( 0.39, 0.93, 0);
+
+    // --- Head (big Minecraft-style square) ---
+    this.headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), mat(SKIN_COLOR));
+    this.headMesh.position.set(0, 1.62, 0);
+
+    // --- Eyes on the +Z face (forward direction) ---
+    const leftEye  = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.10, 0.05), mat(DARK_COLOR));
+    const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.10, 0.05), mat(DARK_COLOR));
+    leftEye.position.set(-0.15, 1.65, 0.33);
+    rightEye.position.set( 0.15, 1.65, 0.33);
+
+    // --- Gun stub on right arm, barrel pointing +Z (forward) ---
+    this.gunStub = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.36), mat(0x333333));
+    this.gunStub.position.set(0.39, 0.93, 0.26);
+    this.gunStub.material.emissive = new THREE.Color(0x000000);
 
     this.mesh = new THREE.Group();
-    this.mesh.add(this.bodyMesh, this.headMesh, this.gunStub);
+    this.mesh.add(
+      this.leftLeg, this.rightLeg,
+      this.bodyMesh,
+      this.leftArm, this.rightArm,
+      this.headMesh, leftEye, rightEye,
+      this.gunStub
+    );
     this.mesh.position.copy(position);
-    this.mesh.position.y = 0.7;
+    this.mesh.position.y = 0;
 
     this.scene.add(this.mesh);
+
+    // Track colored parts for death / respawn resets
+    this._teamColorParts = [this.leftLeg, this.rightLeg, this.leftArm, this.rightArm];
+
     this._buildHealthBar();
   }
 
@@ -86,7 +127,7 @@ export class Bot {
       map: this._hpTexture, transparent: true, depthTest: false
     });
     this.hpBar = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.1), mat);
-    this.hpBar.position.y = 1.65;
+    this.hpBar.position.y = 2.15;
     this.mesh.add(this.hpBar);
     this._updateHealthBar();
   }
@@ -102,38 +143,56 @@ export class Bot {
     this._hpTexture.needsUpdate = true;
   }
 
-  // Shared position interface — lets consumeShot() and BotManager treat
-  // Bot and Player uniformly. Returns chest/head height in world space.
-  get position() {
-    return new THREE.Vector3(
-      this.mesh.position.x,
-      this.mesh.position.y + 1.0,
-      this.mesh.position.z
-    );
-  }
-
+  // Returns true if the bot died from this hit
   takeDamage(amount) {
-    if (this.dead) return;
+    if (this.dead) return false;
     this.hp -= amount;
     this._updateHealthBar();
     if (this.hp <= 0) {
       this._die();
-    } else if (this.state === STATE.PATROL || this.state === STATE.ALERT) {
+      return true;
+    }
+    if (this.state === STATE.PATROL || this.state === STATE.ALERT) {
       this.state = STATE.CHASE;
       this._stateTimer = 0;
     }
+    return false;
   }
 
   _die() {
     this.dead = true;
     this.state = STATE.DEAD;
+    // Fall sideways
+    this.mesh.rotation.z = Math.PI / 2;
+    this._teamColorParts.forEach(m => m.material.color.setHex(DEAD_COLOR));
     this.bodyMesh.material.color.setHex(DEAD_COLOR);
     this.headMesh.material.color.setHex(DEAD_COLOR);
-    this.mesh.position.y = 0.15;
     this.hpBar.visible = false;
   }
 
-  // Start HIDE_CODE phase: walk to spot, then fire callback
+  // Reset bot to alive state at its original spawn position
+  respawn() {
+    this.hp          = C.BOT_HP;
+    this.dead        = false;
+    this.state       = STATE.PATROL;
+    this._stateTimer = 0;
+    this._fireTimer  = 0;
+    this._lastShot   = null;
+    this.chaseTargetBot = null;
+    this.lastKnownPos   = null;
+
+    // Restore colours
+    this._teamColorParts.forEach(m => m.material.color.setHex(this._teamColor));
+    this.bodyMesh.material.color.setHex(this._bodyAccent);
+    this.headMesh.material.color.setHex(SKIN_COLOR);
+
+    // Restore pose and position
+    this.mesh.rotation.set(0, 0, 0);
+    this.mesh.position.copy(this._spawnPos);
+    this.hpBar.visible = true;
+    this._updateHealthBar();
+  }
+
   startHideCode(spot, onPlaced) {
     this.state        = STATE.HIDE_CODE;
     this._hideSpot    = spot.clone();
@@ -141,7 +200,6 @@ export class Bot {
     this._codePlaced  = false;
   }
 
-  // Start defuse mission: walk to bomb pos, wait, then fire callback
   startDefuseMission(bombPos, onDefuse) {
     this.state           = STATE.DEFUSE;
     this._defuseSpot     = bombPos.clone();
@@ -149,7 +207,6 @@ export class Bot {
     this._defuseTimer    = 0;
   }
 
-  // Main update — chasePos is the default target (player pos for enemy bots)
   update(delta, chasePos, collisionMap, wallMeshes) {
     if (this.dead) return;
 
@@ -158,14 +215,12 @@ export class Bot {
     this._stateTimer += delta;
 
     // Determine effective chase target
-    // Friendly bots use chaseTargetBot.mesh.position if available
     let effectiveTarget = chasePos;
     if (this.chaseTargetBot && !this.chaseTargetBot.dead) {
       effectiveTarget = this.chaseTargetBot.mesh.position.clone();
       effectiveTarget.y = 1.7;
     }
 
-    // Billboard HP bar toward camera — done externally in main.js
     switch (this.state) {
       case STATE.HIDE_CODE: this._updateHideCode(delta, collisionMap); break;
       case STATE.PATROL:    this._updatePatrol(delta, effectiveTarget, collisionMap, wallMeshes); break;
@@ -185,7 +240,6 @@ export class Bot {
         this._onCodePlaced(this.mesh.position.clone());
         this._onCodePlaced = null;
       }
-      // Stay idle until MAIN phase starts (BotManager will switch state)
     }
   }
 
@@ -196,7 +250,9 @@ export class Bot {
       this.currentWaypoint = (this.currentWaypoint + 1) % this.patrolWaypoints.length;
     }
 
-    // Check LOS to chase target periodically
+    // No combat engagement during HIDE phase
+    if (gameState.is('HIDE')) return;
+
     if (this._losTimer >= C.BOT_LOS_INTERVAL) {
       this._losTimer = 0;
       if (this._canSeePosition(chasePos, wallMeshes)) {
@@ -208,6 +264,8 @@ export class Bot {
   }
 
   _updateAlert(delta, chasePos, wallMeshes) {
+    if (gameState.is('HIDE')) { this.state = STATE.PATROL; return; }
+
     if (this.lastKnownPos) this._faceToward(this.lastKnownPos);
 
     if (this._losTimer >= C.BOT_LOS_INTERVAL) {
@@ -224,19 +282,17 @@ export class Bot {
   }
 
   _updateChase(delta, chasePos, cm, wallMeshes) {
+    if (gameState.is('HIDE')) { this.state = STATE.PATROL; return; }
+
     this.lastKnownPos = chasePos.clone();
     this._walkTo(chasePos, C.BOT_RUN_SPEED, delta, cm);
 
     if (this._losTimer >= C.BOT_LOS_INTERVAL) {
       this._losTimer = 0;
       const dist = this._dist2D(this.mesh.position, chasePos);
-
       const canSee = this._canSeePosition(chasePos, wallMeshes);
 
       if (!canSee) {
-        // Enemy bots go ALERT when they lose the player (realistic).
-        // Friendly bots keep pushing toward their target regardless of LOS —
-        // they know where the enemy is via radio.
         if (this.team === 'enemy') {
           this.state = STATE.ALERT;
           this._stateTimer = 0;
@@ -251,6 +307,8 @@ export class Bot {
   }
 
   _updateAttack(delta, chasePos, wallMeshes) {
+    if (gameState.is('HIDE')) { this.state = STATE.PATROL; return; }
+
     this._faceToward(chasePos);
 
     if (this._losTimer >= C.BOT_LOS_INTERVAL) {
@@ -262,8 +320,6 @@ export class Bot {
         this._stateTimer = 0;
         return;
       }
-
-      // Slight lateral movement while attacking
       this._lateralMove(delta, chasePos);
     }
 
@@ -288,7 +344,6 @@ export class Bot {
     }
   }
 
-  // Returns true when arrived at target
   _walkTo(target, speed, delta, cm) {
     const pos = this.mesh.position;
     const dx  = target.x - pos.x;
@@ -301,7 +356,7 @@ export class Bot {
     pos.z += (dz / dist) * step;
 
     cm.resolve(pos, 0.35);
-    cm.clampToMap(pos, 60, 80);
+    cm.clampToMap(pos);  // uses stored dimensions
 
     this.mesh.rotation.y = Math.atan2(dx, dz);
     return false;
@@ -353,7 +408,7 @@ export class Bot {
     const ray = new THREE.Raycaster(origin, dir, 0, C.BOT_ATTACK_RANGE + 3);
     this._lastShot = { ray, damage: C.BOT_DAMAGE };
 
-    // Muzzle flash — briefly illuminate the gun stub
+    // Muzzle flash
     const mat = this.gunStub.material;
     mat.emissive.setHex(0xffaa00);
     setTimeout(() => {
@@ -361,7 +416,6 @@ export class Bot {
     }, 90);
   }
 
-  // Called by BotManager to apply the queued shot to a target
   consumeShot(target) {
     if (!this._lastShot) return false;
     const { ray, damage } = this._lastShot;

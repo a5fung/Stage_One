@@ -95,6 +95,65 @@ body {
   padding: 0 20px;
 }
 
+.stage-btn-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stage-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 130px;
+  padding: 18px 24px;
+  font-size: clamp(14px, 2.5vw, 18px);
+}
+
+.stage-btn-sub {
+  font-size: clamp(9px, 1.4vw, 12px);
+  letter-spacing: 2px;
+  color: #888;
+  font-weight: normal;
+}
+
+.stage-btn:hover .stage-btn-sub,
+.stage-btn:active .stage-btn-sub {
+  color: #333;
+}
+
+/* Kill score (centre of top HUD) */
+.kill-score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.6);
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.kill-label {
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #777;
+  margin-right: 4px;
+}
+
+.kill-num {
+  font-size: clamp(16px, 2.5vw, 22px);
+  font-weight: bold;
+}
+
+.friendly-kills { color: #4af; }
+.enemy-kills    { color: #f66; }
+
+.kill-sep {
+  color: #555;
+  font-size: 14px;
+}
+
 /* =================== HELP SCREEN =================== */
 #helpScreen {
   position: fixed;

@@ -42,9 +42,10 @@ export class ShootingSystem {
         bot = botManager.getBotFromMesh(obj);
       }
       if (bot && !bot.dead) {
-        bot.takeDamage(BULLET_DAMAGE);
+        const died = bot.takeDamage(BULLET_DAMAGE);
         this._flashHitMarker();
         this._spawnImpact(hit.point);
+        if (died) botManager.onPlayerKill(bot);
         return true;
       }
     }

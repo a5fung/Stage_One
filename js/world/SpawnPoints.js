@@ -27,6 +27,29 @@ export const ENEMY_SPAWNS = [
 export const TEAM_BOMB_POS  = new THREE.Vector3(30, 0, 6);
 export const ENEMY_BOMB_POS = new THREE.Vector3(30, 0, 74);
 
+// ============================================================
+// STAGE 2 spawn points (80×80 map, teams at south/north)
+// ============================================================
+export const S2_PLAYER_SPAWN = new THREE.Vector3(40, 1.7, 8);
+
+export const S2_FRIENDLY_SPAWNS = [
+  new THREE.Vector3(35, 0, 6),
+  new THREE.Vector3(45, 0, 6),
+  new THREE.Vector3(33, 0, 11),
+  new THREE.Vector3(47, 0, 11),
+];
+
+export const S2_ENEMY_SPAWNS = [
+  new THREE.Vector3(40, 0, 72),
+  new THREE.Vector3(35, 0, 74),
+  new THREE.Vector3(45, 0, 74),
+  new THREE.Vector3(33, 0, 68),
+  new THREE.Vector3(47, 0, 68),
+];
+
+export const S2_TEAM_BOMB_POS  = new THREE.Vector3(40, 0, 5);
+export const S2_ENEMY_BOMB_POS = new THREE.Vector3(40, 0, 75);
+
 // Code note hiding spots (enemy bots walk here during HIDE phase)
 export const CODE_NOTE_SPOTS = [
   new THREE.Vector3(10, 0, 35),

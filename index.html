@@ -14,7 +14,6 @@
   }
   </script>
 
-  <!-- Catch any JS errors that would silently kill the button -->
   <script>
     window.addEventListener('error', function(e) {
       const el = document.getElementById('jsError');
@@ -29,17 +28,19 @@
   </script>
 </head>
 <body>
-  <!-- Error display (hidden unless JS throws) -->
   <div id="jsError" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#f44;color:#fff;padding:10px;font-family:monospace;font-size:13px;z-index:9999;word-break:break-all;"></div>
 
   <canvas id="gameCanvas"></canvas>
 
   <!-- MENU SCREEN -->
   <div id="menuScreen">
-    <div class="menu-title">STAGE ONE</div>
-    <div class="menu-subtitle">5v5 BOMB DEFUSAL</div>
+    <div class="menu-title">BOMB DEFUSAL</div>
+    <div class="menu-subtitle">CHOOSE A STAGE</div>
     <div id="loadingMsg" style="color:#888;font-family:monospace;letter-spacing:3px;font-size:13px;margin-bottom:16px;">LOADING...</div>
-    <button id="startBtn" class="menu-btn" style="display:none">CLICK TO PLAY</button>
+    <div class="stage-btn-row">
+      <button id="stage1Btn" class="menu-btn stage-btn" style="display:none">STAGE 1<br><span class="stage-btn-sub">Industrial</span></button>
+      <button id="stage2Btn" class="menu-btn stage-btn" style="display:none">STAGE 2<br><span class="stage-btn-sub">Food World</span></button>
+    </div>
     <button id="helpBtn" class="menu-btn-secondary" style="display:none">HOW TO PLAY</button>
     <div class="menu-hint">WASD / Arrow Keys — Move &nbsp;|&nbsp; Mouse — Look &nbsp;|&nbsp; LMB — Shoot &nbsp;|&nbsp; R — Reload &nbsp;|&nbsp; E — Interact</div>
     <div class="menu-hint" style="margin-top:6px;">Mobile: Joystick (left) — Move &nbsp;|&nbsp; Swipe (right) — Look &nbsp;|&nbsp; Fire button — Shoot</div>
@@ -52,23 +53,25 @@
 
       <div class="help-section">
         <div class="help-section-title">OBJECTIVE</div>
-        <p>Find the 4-digit code notes hidden by enemy agents. Enter the code at the enemy bomb to defuse it — before your own bomb explodes.</p>
+        <p>Your friendly bot hides your team's 4-digit defuse code somewhere on the map. Find it, then walk to <strong>YOUR OWN bomb</strong> and enter the code to defuse it before it explodes.</p>
       </div>
 
       <div class="help-columns">
         <div class="help-col">
           <div class="help-section-title">PHASES</div>
-          <div class="help-row"><span class="help-tag hide-tag">HIDE</span><span>30 seconds. Enemy bots hide code notes around the map. Explore but don't shoot yet.</span></div>
-          <div class="help-row"><span class="help-tag main-tag">MAIN</span><span>3 minutes. Hunt for notes, cross the map, enter the code at the enemy bomb.</span></div>
+          <div class="help-row"><span class="help-tag hide-tag">HIDE</span><span>30 seconds. Both teams hide their codes. No combat.</span></div>
+          <div class="help-row"><span class="help-tag main-tag">MAIN</span><span>3 minutes. Find YOUR code, defuse YOUR bomb before the timer hits 0:00.</span></div>
 
           <div class="help-section-title" style="margin-top:18px;">WIN CONDITIONS</div>
-          <div class="help-row"><span class="help-icon">✓</span><span>Enter the correct code at the <strong>enemy bomb</strong></span></div>
-          <div class="help-row"><span class="help-icon">✓</span><span>Enemy bomb timer reaches <strong>0:00</strong></span></div>
+          <div class="help-row"><span class="help-icon">✓</span><span>Enter the correct code at <strong>your own bomb</strong></span></div>
+          <div class="help-row"><span class="help-icon">✓</span><span>Enemy bomb timer expires (they failed)</span></div>
+          <div class="help-row"><span class="help-icon">✓</span><span>Both bombs expire + your team has more kills</span></div>
 
           <div class="help-section-title" style="margin-top:18px;">LOSE CONDITIONS</div>
-          <div class="help-row"><span class="help-icon lose">✗</span><span>Your team's bomb timer hits <strong>0:00</strong></span></div>
-          <div class="help-row"><span class="help-icon lose">✗</span><span>An enemy agent defuses <strong>your bomb</strong></span></div>
-          <div class="help-row"><span class="help-icon lose">✗</span><span>You are <strong>eliminated</strong> (HP reaches 0)</span></div>
+          <div class="help-row"><span class="help-icon lose">✗</span><span>Your bomb timer hits <strong>0:00</strong> (didn't defuse)</span></div>
+          <div class="help-row"><span class="help-icon lose">✗</span><span>Enemy agent defuses <strong>their own bomb</strong></span></div>
+          <div class="help-row"><span class="help-icon lose">✗</span><span>Both bombs expire + enemy has more kills</span></div>
+          <div class="help-row"><span class="help-icon lose">✗</span><span>You are <strong>eliminated</strong></span></div>
         </div>
 
         <div class="help-col">
@@ -81,7 +84,7 @@
           <div class="help-key-row"><kbd>Click canvas</kbd><span>Lock cursor</span></div>
           <div class="help-key-row"><kbd>ESC</kbd><span>Unlock cursor / Cancel defuse</span></div>
 
-          <div class="help-section-title" style="margin-top:18px;">MOBILE / IPAD CONTROLS</div>
+          <div class="help-section-title" style="margin-top:18px;">MOBILE / IPAD</div>
           <div class="help-key-row"><span class="help-ctrl">Left joystick</span><span>Move</span></div>
           <div class="help-key-row"><span class="help-ctrl">Swipe right side</span><span>Look</span></div>
           <div class="help-key-row"><span class="help-ctrl">FIRE button</span><span>Shoot</span></div>
@@ -92,10 +95,10 @@
 
       <div class="help-section" style="margin-top:18px;">
         <div class="help-section-title">TIPS</div>
-        <div class="help-row"><span class="help-icon">→</span><span>Code notes glow and float — look for yellow light near boxes and corridors</span></div>
-        <div class="help-row"><span class="help-icon">→</span><span>Your friendly bots will fight enemies — use them as cover while you find notes</span></div>
-        <div class="help-row"><span class="help-icon">→</span><span>The enemy bomb is in the far base (north end of map). Your bomb is south.</span></div>
-        <div class="help-row"><span class="help-icon">→</span><span>You only need ONE collected code to defuse. Multiple notes give backup codes.</span></div>
+        <div class="help-row"><span class="help-icon">→</span><span>Golden compass arrow points to your team's code note</span></div>
+        <div class="help-row"><span class="help-icon">→</span><span>Your bomb is in YOUR base (south). Enemy bomb is north.</span></div>
+        <div class="help-row"><span class="help-icon">→</span><span>Bots respawn 5 seconds after death — combat never stops</span></div>
+        <div class="help-row"><span class="help-icon">→</span><span>Kill the enemy defuse runner to buy time before their bomb goes off</span></div>
       </div>
 
       <button id="helpCloseBtn" class="menu-btn" style="margin-top:28px;">BACK TO MENU</button>
@@ -108,8 +111,14 @@
   <!-- TOP HUD -->
   <div id="topHud" class="hidden">
     <div id="teamBombTimer" class="bomb-timer team-timer">
-      <span class="timer-label">TEAM BOMB</span>
+      <span class="timer-label">YOUR BOMB</span>
       <span id="teamBombTime">3:00</span>
+    </div>
+    <div id="killScore" class="kill-score hidden">
+      <span class="kill-label">KILLS</span>
+      <span id="friendlyKills" class="kill-num friendly-kills">0</span>
+      <span class="kill-sep">/</span>
+      <span id="enemyKills" class="kill-num enemy-kills">0</span>
     </div>
     <div id="enemyBombTimer" class="bomb-timer enemy-timer">
       <span class="timer-label">ENEMY BOMB</span>
@@ -144,7 +153,7 @@
   <!-- PHASE TIMER (HIDE phase countdown) -->
   <div id="phaseTimer" class="hidden"></div>
 
-  <!-- NOTIFICATION POPUP (code found, etc.) -->
+  <!-- NOTIFICATION POPUP -->
   <div id="notification" class="hidden"></div>
 
   <!-- CODE PANEL (bomb defuse input) -->
@@ -159,7 +168,6 @@
     </div>
     <div id="codeError" class="hidden">WRONG CODE</div>
     <div class="code-panel-hint" style="margin-top:12px;">ESC to cancel</div>
-    <!-- Mobile number pad -->
     <div id="mobileNumpad">
       <button class="numpad-btn" data-digit="1">1</button>
       <button class="numpad-btn" data-digit="2">2</button>
@@ -191,26 +199,21 @@
 
   <!-- MOBILE CONTROLS -->
   <div id="mobileControls" class="hidden">
-    <!-- Left joystick -->
     <div id="joystickZone">
       <div id="joystickBase">
         <div id="joystickThumb"></div>
       </div>
     </div>
-    <!-- Right look zone (swipe area) -->
     <div id="lookZone"></div>
-    <!-- Fire button -->
     <button id="fireBtn">FIRE</button>
-    <!-- Interact button -->
     <button id="interactBtn">E</button>
-    <!-- Reload button -->
     <button id="reloadBtn">R</button>
   </div>
 
   <!-- INTERACT PROMPT -->
   <div id="interactPrompt" class="hidden">[E] Interact</div>
 
-  <!-- NOTE COMPASS — arrow pointing toward nearest code note -->
+  <!-- NOTE COMPASS -->
   <div id="noteCompass" class="hidden">
     <div id="noteCompassArrow">▲</div>
     <div id="noteCompassDist"></div>

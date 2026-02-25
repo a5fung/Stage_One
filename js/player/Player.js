@@ -146,6 +146,6 @@ export class Player {
 
     // Collision
     this.cm.resolve(pos, C.PLAYER_RADIUS);
-    this.cm.clampToMap(pos, 60, 80);
+    this.cm.clampToMap(pos);
   }
 }

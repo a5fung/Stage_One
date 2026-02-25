@@ -23,6 +23,9 @@ export class HUD {
       phaseBanner: document.getElementById('phaseBanner'),
       notification:document.getElementById('notification'),
       mobileControls: document.getElementById('mobileControls'),
+      killScore:   document.getElementById('killScore'),
+      friendlyKillsEl: document.getElementById('friendlyKills'),
+      enemyKillsEl:    document.getElementById('enemyKills'),
     };
 
     this._prevHp   = -1;
@@ -37,6 +40,7 @@ export class HUD {
     this.els.bottomHud.classList.add('hidden');
     this.els.crosshair.classList.add('hidden');
     this.els.endScreen.classList.add('hidden');
+    if (this.els.killScore) this.els.killScore.classList.add('hidden');
   }
 
   showGame() {
@@ -44,7 +48,7 @@ export class HUD {
     this.els.topHud.classList.remove('hidden');
     this.els.bottomHud.classList.remove('hidden');
     this.els.crosshair.classList.remove('hidden');
-    // Show mobile controls if on a touch device
+    if (this.els.killScore) this.els.killScore.classList.remove('hidden');
     if (window.matchMedia('(pointer: coarse)').matches) {
       if (this.els.mobileControls) this.els.mobileControls.classList.remove('hidden');
     }
@@ -55,17 +59,21 @@ export class HUD {
     this.els.topHud.classList.add('hidden');
     this.els.bottomHud.classList.add('hidden');
     this.els.crosshair.classList.add('hidden');
+    if (this.els.killScore) this.els.killScore.classList.add('hidden');
     if (this.els.mobileControls) this.els.mobileControls.classList.add('hidden');
 
-    const win = reason === 'WIN_DEFUSE' || reason === 'WIN_TIMER';
+    const win = reason === 'WIN_DEFUSE' || reason === 'WIN_TIMER' || reason === 'WIN_KILLS';
     this.els.endTitle.textContent = win ? 'VICTORY' : 'DEFEAT';
     this.els.endTitle.style.color = win ? '#4af' : '#f44';
 
+    const kills = window._killCounts || { friendly: 0, enemy: 0 };
     const messages = {
-      'WIN_DEFUSE':   'Enemy bomb defused.',
-      'WIN_TIMER':    'Enemy bomb timer expired.',
-      'LOSE_EXPLODE': 'Your team\'s bomb exploded.',
-      'LOSE_DEFUSED': 'Enemy agent defused your bomb.',
+      'WIN_DEFUSE':   'You defused your own bomb.',
+      'WIN_TIMER':    'Enemy bomb timer expired — they failed to defuse.',
+      'WIN_KILLS':    `Both bombs exploded — your team had more kills (${kills.friendly} vs ${kills.enemy}).`,
+      'LOSE_EXPLODE': 'Your bomb exploded — you ran out of time.',
+      'LOSE_DEFUSED': 'Enemy agent defused their own bomb.',
+      'LOSE_KILLS':   `Both bombs exploded — enemy had more kills (${kills.enemy} vs ${kills.friendly}).`,
       'LOSE_DEAD':    'You were eliminated.',
     };
     this.els.endSubtitle.textContent = messages[reason] || '';
@@ -75,9 +83,8 @@ export class HUD {
     const b = this.els.phaseBanner;
     b.textContent = text;
     b.classList.remove('hidden');
-    // Reset animation
     b.style.animation = 'none';
-    b.offsetHeight; // force reflow
+    b.offsetHeight;
     b.style.animation = '';
     setTimeout(() => b.classList.add('hidden'), duration);
   }
@@ -93,7 +100,7 @@ export class HUD {
     this.els.phaseTimer.classList.add('hidden');
   }
 
-  update(delta, player, bombSystem) {
+  update(delta, player, bombSystem, botManager) {
     // HP
     if (player.hp !== this._prevHp) {
       this._prevHp = player.hp;
@@ -129,6 +136,13 @@ export class HUD {
         const pulse = bombSystem.enemyTimer < 30;
         this.els.enemyTimer.classList.toggle('pulse', pulse);
       }
+    }
+
+    // Kill counter
+    if (botManager && this.els.friendlyKillsEl && this.els.enemyKillsEl) {
+      const kills = botManager.getKillCounts();
+      this.els.friendlyKillsEl.textContent = kills.friendly;
+      this.els.enemyKillsEl.textContent    = kills.enemy;
     }
   }
 
