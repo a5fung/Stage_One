@@ -200,11 +200,14 @@ export class Bot {
     this._codePlaced  = false;
   }
 
-  startDefuseMission(bombPos, onDefuse) {
-    this.state           = STATE.DEFUSE;
-    this._defuseSpot     = bombPos.clone();
-    this._defuseCallback = onDefuse;
-    this._defuseTimer    = 0;
+  // codeNotePos: walk here first to "pick up" the code, then walk to bombPos
+  startDefuseMission(codeNotePos, bombPos, onDefuse) {
+    this.state              = STATE.DEFUSE;
+    this._defuseCodeSpot    = codeNotePos ? codeNotePos.clone() : null;
+    this._defuseSpot        = bombPos.clone();
+    this._defuseCallback    = onDefuse;
+    this._defuseTimer       = 0;
+    this._hasCode           = false;
   }
 
   update(delta, chasePos, collisionMap, wallMeshes) {
@@ -331,6 +334,19 @@ export class Bot {
 
   _updateDefuse(delta, cm) {
     if (!this._defuseSpot) return;
+
+    // Phase 1: walk to code note spot to pick it up
+    if (this._defuseCodeSpot && !this._hasCode) {
+      const dist = this._dist2D(this.mesh.position, this._defuseCodeSpot);
+      if (dist > 1.2) {
+        this._walkTo(this._defuseCodeSpot, C.BOT_RUN_SPEED, delta, cm);
+      } else {
+        this._hasCode = true; // "collected" the code
+      }
+      return;
+    }
+
+    // Phase 2: walk to bomb and defuse it
     const dist = this._dist2D(this.mesh.position, this._defuseSpot);
     if (dist > 1.2) {
       this._walkTo(this._defuseSpot, C.BOT_RUN_SPEED, delta, cm);

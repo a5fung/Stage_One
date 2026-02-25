@@ -17,6 +17,7 @@ export class BotManager {
     this._onFriendlyCodePlaced = null;
     this._onEnemyCodePlaced    = null;
     this._onEnemyBombDefused   = null;
+    this._enemyCodePos         = null;
 
     // Kill tracking
     this.friendlyKillCount = 0; // killed by player / friendly bots
@@ -55,13 +56,16 @@ export class BotManager {
     }
   }
 
-  // HIDE phase: one friendly bot and one enemy bot each hide a code
-  // friendlySpots / enemySpots are stage-specific arrays (defaults to Stage 1)
+  // HIDE phase: friendly bot 0 hides YOUR code, friendly bot 1 hides the ENEMY code.
+  // Enemy bots do not hide anything — they patrol.
+  // friendlySpots = where friendly bot hides your code
+  // enemySpots    = where friendly bot hides the enemy code (enemy runner fetches it in MAIN)
   startHidePhase(onFriendlyCodePlaced, onEnemyCodePlaced, friendlySpots, enemySpots) {
     this._onFriendlyCodePlaced = onFriendlyCodePlaced;
     this._onEnemyCodePlaced    = onEnemyCodePlaced;
+    this._enemyCodePos         = null;
 
-    // --- Friendly code runner ---
+    // --- Bot 0: hides YOUR defuse code ---
     const fSpots = friendlySpots ? [...friendlySpots] : [...FRIENDLY_HIDE_SPOTS];
     _shuffle(fSpots);
     const friendlyRunner = this.friendlyBots[0];
@@ -71,7 +75,6 @@ export class BotManager {
       if (this._onFriendlyCodePlaced) this._onFriendlyCodePlaced(pos, friendlyCode);
     });
 
-    // Fallback: drop friendly note after 25s if bot gets stuck
     setTimeout(() => {
       if (friendlyRunner._onCodePlaced) {
         const pos = friendlyRunner.mesh.position.clone();
@@ -81,37 +84,38 @@ export class BotManager {
       }
     }, 25000);
 
-    // --- Enemy code runner ---
+    // --- Bot 1: hides the ENEMY defuse code (enemy runner must fetch it in MAIN) ---
     const eSpots = enemySpots ? [...enemySpots] : [...ENEMY_HIDE_SPOTS];
     _shuffle(eSpots);
-    const enemyRunner = this.enemyBots[0];
-    const enemyCode   = String(1000 + Math.floor(Math.random() * 9000));
-    enemyRunner._assignedCode = enemyCode;
-    enemyRunner.startHideCode(eSpots[0], (pos) => {
+    const enemyCodeRunner = this.friendlyBots[1];
+    const enemyCode       = String(1000 + Math.floor(Math.random() * 9000));
+    enemyCodeRunner._assignedCode = enemyCode;
+    enemyCodeRunner.startHideCode(eSpots[0], (pos) => {
+      this._enemyCodePos = pos.clone();   // enemy runner needs this in MAIN phase
       if (this._onEnemyCodePlaced) this._onEnemyCodePlaced(pos, enemyCode);
     });
 
-    // Fallback for enemy runner
     setTimeout(() => {
-      if (enemyRunner._onCodePlaced) {
-        const pos = enemyRunner.mesh.position.clone();
-        enemyRunner._onCodePlaced(pos);
-        enemyRunner._onCodePlaced = null;
-        enemyRunner._codePlaced = true;
+      if (enemyCodeRunner._onCodePlaced) {
+        const pos = enemyCodeRunner.mesh.position.clone();
+        this._enemyCodePos = pos.clone();
+        enemyCodeRunner._onCodePlaced(pos);
+        enemyCodeRunner._onCodePlaced = null;
+        enemyCodeRunner._codePlaced = true;
       }
     }, 25000);
 
-    // Other enemy bots patrol during HIDE
-    for (let i = 1; i < this.enemyBots.length; i++) {
-      this.enemyBots[i].state = STATE.PATROL;
+    // All enemy bots patrol during HIDE (no combat, no hiding)
+    for (const bot of this.enemyBots) {
+      bot.state = STATE.PATROL;
     }
-    // Other friendly bots patrol during HIDE
-    for (let i = 1; i < this.friendlyBots.length; i++) {
+    // Remaining friendly bots patrol
+    for (let i = 2; i < this.friendlyBots.length; i++) {
       this.friendlyBots[i].state = STATE.PATROL;
     }
   }
 
-  // MAIN phase: bots patrol/fight; enemy runner goes to ENEMY bomb (their own bomb)
+  // MAIN phase: enemy runner fetches the code (hidden by friendly bot 1) then defuses their bomb
   startMainPhase(onEnemyBombDefused, enemyBombPos) {
     this._onEnemyBombDefused = onEnemyBombDefused;
     const bombTarget = enemyBombPos || ENEMY_BOMB_POS;
@@ -123,10 +127,10 @@ export class BotManager {
       if (!bot.dead && bot.state === STATE.HIDE_CODE) bot.state = STATE.PATROL;
     }
 
-    // Enemy runner walks to their OWN bomb to defuse it
+    // Enemy runner: go to where friendly bot hid the enemy code, then defuse bomb
     const runner = this.enemyBots.find(b => !b.dead);
     if (runner) {
-      runner.startDefuseMission(bombTarget, () => {
+      runner.startDefuseMission(this._enemyCodePos, bombTarget, () => {
         if (this._onEnemyBombDefused) this._onEnemyBombDefused();
       });
     }
@@ -299,6 +303,7 @@ export class BotManager {
     this._respawnQueue = [];
     this.friendlyKillCount = 0;
     this.enemyKillCount    = 0;
+    this._enemyCodePos     = null;
   }
 }
 
